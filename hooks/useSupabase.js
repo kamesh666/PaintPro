@@ -47,6 +47,49 @@ export const useProjectSummary = (id) =>
     enabled: !!id,
   });
 
+export const useProjectHistory = (projectId) =>
+  useQuery({
+    queryKey: ['project_history', projectId],
+    queryFn: async () => {
+      const [
+        projectRes,
+        materialRes,
+        labourRes,
+        paymentRes,
+        photoRes,
+        quotationRes,
+        invoiceRes,
+      ] = await Promise.all([
+        supabase.from('projects').select('*, clients(name, phone)').eq('id', projectId).single(),
+        supabase.from('material_costs').select('*').eq('project_id', projectId).order('purchase_date', { ascending: false }),
+        supabase.from('labour_logs').select('*, workers(name)').eq('project_id', projectId).order('log_date', { ascending: false }),
+        supabase.from('client_payments').select('*').eq('project_id', projectId).order('payment_date', { ascending: false }),
+        supabase.from('project_photos').select('id, caption, uploaded_at').eq('project_id', projectId).order('uploaded_at', { ascending: false }),
+        supabase.from('quotations').select('id, quote_no, quote_date, total_amount, status, created_at').eq('project_id', projectId).order('created_at', { ascending: false }),
+        supabase.from('invoices').select('id, invoice_no, invoice_date, total, status, created_at').eq('project_id', projectId).order('created_at', { ascending: false }),
+      ]);
+
+      if (projectRes.error) throw projectRes.error;
+      if (materialRes.error) throw materialRes.error;
+      if (labourRes.error) throw labourRes.error;
+      if (paymentRes.error) throw paymentRes.error;
+      if (photoRes.error) throw photoRes.error;
+      if (quotationRes.error) throw quotationRes.error;
+      if (invoiceRes.error) throw invoiceRes.error;
+
+      return {
+        project: projectRes.data,
+        materialCosts: materialRes.data ?? [],
+        labourLogs: labourRes.data ?? [],
+        payments: paymentRes.data ?? [],
+        photos: photoRes.data ?? [],
+        quotations: quotationRes.data ?? [],
+        invoices: invoiceRes.data ?? [],
+      };
+    },
+    enabled: !!projectId,
+  });
+
 export const useUpsertProject = () => {
   const qc = useQueryClient();
   return useMutation({
