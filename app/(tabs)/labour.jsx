@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Colors } from "../../constants/colors";
+import { Colors, Spacing } from "../../constants/colors";
 import { InputStyles, LabelStyles } from "../../constants/theme";
 import {
   useAddLabourLog,
