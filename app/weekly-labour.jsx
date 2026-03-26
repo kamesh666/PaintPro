@@ -39,6 +39,16 @@ function mondayStr(d) {
   return d.toISOString().split('T')[0];
 }
 
+function parseColorMeta(label = '') {
+  const match = label.match(/\s*\[Color:\s*(.*?)\s*\|\s*(#[0-9A-Fa-f]{3,8})\s*\]\s*$/);
+  if (!match) return { cleanLabel: label, colorName: '', colorCode: '' };
+  return {
+    cleanLabel: label.replace(match[0], '').trim(),
+    colorName: match[1]?.trim() ?? '',
+    colorCode: match[2]?.trim() ?? '',
+  };
+}
+
 function weekLabel(d) {
   const end = new Date(d);
   end.setDate(end.getDate() + 6);
@@ -278,6 +288,8 @@ function AddExpenseModal({ visible, onClose, projectId, weekStart, onSaved }) {
   const [desc,   setDesc]   = useState('');
   const [amount, setAmount] = useState('');
   const [cat,    setCat]    = useState('other');
+  const [colorName, setColorName] = useState('');
+  const [colorCode, setColorCode] = useState('');
   const [saving, setSaving] = useState(false);
 
   const CATS = [
@@ -289,18 +301,36 @@ function AddExpenseModal({ visible, onClose, projectId, weekStart, onSaved }) {
   ];
 
   useEffect(() => {
-    if (visible) { setDesc(''); setAmount(''); setCat('other'); }
+    if (visible) {
+      setDesc('');
+      setAmount('');
+      setCat('other');
+      setColorName('');
+      setColorCode('');
+    }
   }, [visible]);
 
   const handleSave = async () => {
     if (!desc.trim()) { Alert.alert('Required','Enter description'); return; }
     if (!amount)      { Alert.alert('Required','Enter amount'); return; }
+    const normalizedCode = colorCode.trim()
+      ? (colorCode.trim().startsWith('#') ? colorCode.trim() : `#${colorCode.trim()}`)
+      : '';
+    if (normalizedCode && !/^#[0-9A-Fa-f]{3,8}$/.test(normalizedCode)) {
+      Alert.alert('Invalid color code', 'Use hex format like #FF5733');
+      return;
+    }
+
+    const encodedDesc = normalizedCode || colorName.trim()
+      ? `${desc.trim()} [Color: ${colorName.trim() || 'Unnamed'} | ${normalizedCode || '#000000'}]`
+      : desc.trim();
+
     setSaving(true);
     try {
       // Store in material_costs table with category
       const { error } = await supabase.from('material_costs').insert({
         project_id:    projectId,
-        item_name:     desc.trim(),
+        item_name:     encodedDesc,
         total_cost:    parseFloat(amount)||0,
         category:      cat,
         purchase_date: weekStart,
@@ -340,6 +370,14 @@ function AddExpenseModal({ visible, onClose, projectId, weekStart, onSaved }) {
           <TextInput style={INPUT} value={desc} onChangeText={setDesc}
             placeholder="e.g. Diesel for generator" placeholderTextColor="#9CA3AF"
             underlineColorAndroid="transparent" />
+          <Text style={styles.label}>Color name</Text>
+          <TextInput style={INPUT} value={colorName} onChangeText={setColorName}
+            placeholder="e.g. Ocean Blue" placeholderTextColor="#9CA3AF"
+            underlineColorAndroid="transparent" />
+          <Text style={styles.label}>Color code (Hex)</Text>
+          <TextInput style={INPUT} value={colorCode} onChangeText={setColorCode}
+            placeholder="e.g. #1E40AF" placeholderTextColor="#9CA3AF"
+            autoCapitalize="characters" underlineColorAndroid="transparent" />
           <Text style={styles.label}>Amount (₹) *</Text>
           <TextInput style={[INPUT,{ fontSize:22, fontWeight:'700', color:Colors.primary }]}
             value={amount} onChangeText={setAmount}
@@ -501,11 +539,24 @@ function ProjectDetailModal({ visible, onClose, project, weekStart, weekData, on
               <Text style={styles.detailSectionTitle}>📦 Other expenses</Text>
               {weekData.expenses.map((e,i) => (
                 <View key={i} style={styles.expenseCard}>
-                  <View style={{ flex:1 }}>
-                    <Text style={styles.expenseName}>{e.item_name}</Text>
-                    <Text style={styles.expenseSub}>📅 {formatDate(e.purchase_date)}</Text>
-                  </View>
-                  <Text style={[styles.expenseAmt,{ color:Colors.danger }]}>{formatCurrency(e.total_cost)}</Text>
+                  {(() => {
+                    const { cleanLabel, colorName, colorCode } = parseColorMeta(e.item_name);
+                    return (
+                      <>
+                        <View style={{ flex:1 }}>
+                          <Text style={styles.expenseName}>{cleanLabel}</Text>
+                          {(colorName || colorCode) ? (
+                            <View style={styles.colorMetaRow}>
+                              {colorCode ? <View style={[styles.colorSwatch, { backgroundColor: colorCode }]} /> : null}
+                              <Text style={styles.expenseSub}>🎨 {colorName || 'Unnamed'} {colorCode ? `(${colorCode})` : ''}</Text>
+                            </View>
+                          ) : null}
+                          <Text style={styles.expenseSub}>📅 {formatDate(e.purchase_date)}</Text>
+                        </View>
+                        <Text style={[styles.expenseAmt,{ color:Colors.danger }]}>{formatCurrency(e.total_cost)}</Text>
+                      </>
+                    );
+                  })()}
                 </View>
               ))}
             </>
@@ -533,47 +584,102 @@ function ProjectDetailModal({ visible, onClose, project, weekStart, weekData, on
 
 // ─── History Section ──────────────────────────────────────
 function HistorySection({ projectId }) {
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from('weekly_sheet_summary').select('*')
-      .eq('project_id', projectId)
-      .order('week_start', { ascending: false })
-      .then(({ data }) => { setHistory(data??[]); setLoading(false); });
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      const [labourRes, materialRes] = await Promise.all([
+        supabase.from('weekly_sheet_summary')
+          .select('*')
+          .eq('project_id', projectId),
+        supabase.from('material_costs')
+          .select('*')
+          .eq('project_id', projectId),
+      ]);
+
+      if (!mounted) return;
+
+      const labourRows = labourRes.data ?? [];
+      const materialRows = materialRes.data ?? [];
+      const expenseCats = new Set(['fuel','transport','food','tools','other']);
+      const grouped = {};
+
+      labourRows.forEach((row) => {
+        const week = row.week_start;
+        if (!grouped[week]) grouped[week] = { labour: [], expenses: [] };
+        grouped[week].labour.push(row);
+      });
+
+      materialRows.forEach((row) => {
+        if (!expenseCats.has(row.category)) return;
+        const week = mondayStr(getMonday(new Date(row.purchase_date)));
+        if (!grouped[week]) grouped[week] = { labour: [], expenses: [] };
+        grouped[week].expenses.push(row);
+      });
+
+      setHistory(grouped);
+      setLoading(false);
+    })();
+
+    return () => { mounted = false; };
   }, [projectId]);
 
   if (loading) return <ActivityIndicator color={Colors.primary} style={{ margin:16 }} />;
-  if (!history.length) return <Text style={styles.detailEmpty}>No history yet</Text>;
-
-  // Group by week
-  const weeks = {};
-  history.forEach(h => {
-    if (!weeks[h.week_start]) weeks[h.week_start] = [];
-    weeks[h.week_start].push(h);
-  });
+  const weekEntries = Object.entries(history).sort(([a], [b]) => (a < b ? 1 : -1));
+  if (!weekEntries.length) return <Text style={styles.detailEmpty}>No history yet</Text>;
 
   return (
     <View>
-      {Object.entries(weeks).map(([week, sheets]) => {
-        const weekTotal = sheets.reduce((s,sh) => s + Number(sh.gross_amount||0), 0);
-        const weekDays  = sheets.reduce((s,sh) => s + Number(sh.total_days||0),   0);
+      {weekEntries.map(([week, data]) => {
+        const weekLabourTotal = data.labour.reduce((s,sh) => s + Number(sh.gross_amount||0), 0);
+        const weekExpenseTotal = data.expenses.reduce((s,ex) => s + Number(ex.total_cost||0), 0);
+        const weekTotal = weekLabourTotal + weekExpenseTotal;
         return (
           <View key={week} style={styles.historyWeek}>
             <View style={styles.historyWeekHeader}>
               <Text style={styles.historyWeekDate}>📅 {weekLabel(new Date(week))}</Text>
               <Text style={styles.historyWeekTotal}>{formatCurrency(weekTotal)}</Text>
             </View>
-            {sheets.map((sh,i) => (
-              <View key={i} style={styles.historyRow}>
-                <Text style={styles.historyWorker}>{sh.worker_name}</Text>
-                <Text style={styles.historyDays}>{sh.total_days} shifts</Text>
-                <Text style={styles.historyAmt}>{formatCurrency(sh.gross_amount)}</Text>
-                <Text style={[styles.historyBal,{ color: Number(sh.balance_due||0)>0 ? Colors.danger : Colors.success }]}>
-                  Bal: {formatCurrency(Math.abs(sh.balance_due||0))}
-                </Text>
-              </View>
-            ))}
+            {data.labour.length > 0 && (
+              <>
+                <Text style={styles.historySubTitle}>Labour details</Text>
+                {data.labour.map((sh,i) => (
+                  <View key={`l-${i}`} style={styles.historyRow}>
+                    <Text style={styles.historyWorker}>{sh.worker_name}</Text>
+                    <Text style={styles.historyDays}>{sh.total_days} shifts</Text>
+                    <Text style={styles.historyAmt}>{formatCurrency(sh.gross_amount)}</Text>
+                    <Text style={[styles.historyBal,{ color: Number(sh.balance_due||0)>0 ? Colors.danger : Colors.success }]}>
+                      Bal: {formatCurrency(Math.abs(sh.balance_due||0))}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
+            {data.expenses.length > 0 && (
+              <>
+                <Text style={styles.historySubTitle}>Other expenses</Text>
+                {data.expenses.map((ex, i) => {
+                  const { cleanLabel, colorName, colorCode } = parseColorMeta(ex.item_name);
+                  return (
+                    <View key={`e-${i}`} style={styles.historyExpenseRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.historyExpenseName}>{cleanLabel}</Text>
+                        {(colorName || colorCode) ? (
+                          <View style={styles.colorMetaRow}>
+                            {colorCode ? <View style={[styles.colorSwatch, { backgroundColor: colorCode }]} /> : null}
+                            <Text style={styles.expenseSub}>🎨 {colorName || 'Unnamed'} {colorCode ? `(${colorCode})` : ''}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={[styles.historyAmt, { color: Colors.danger }]}>{formatCurrency(ex.total_cost)}</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
           </View>
         );
       })}
@@ -895,13 +1001,18 @@ const styles = StyleSheet.create({
   expenseName:   { fontSize:14, fontWeight:'600', color:'#1A1A2E', marginBottom:2 },
   expenseSub:    { fontSize:11, color:Colors.textMuted },
   expenseAmt:    { fontSize:16, fontWeight:'800', color:Colors.primary },
+  colorMetaRow:  { flexDirection:'row', alignItems:'center', gap:6, marginTop:2 },
+  colorSwatch:   { width:12, height:12, borderRadius:6, borderWidth:1, borderColor:'#D1D5DB' },
 
   historyWeek:   { marginHorizontal:16, marginBottom:12, backgroundColor:'#FFFFFF', borderRadius:12, overflow:'hidden', elevation:1 },
   historyWeekHeader:{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', backgroundColor:'#F8FAFC', padding:10 },
   historyWeekDate:{ fontSize:12, fontWeight:'700', color:'#1A1A2E' },
   historyWeekTotal:{ fontSize:14, fontWeight:'800', color:Colors.primary },
+  historySubTitle:{ fontSize:12, fontWeight:'700', color:Colors.textSecondary, paddingHorizontal:10, paddingTop:8 },
   historyRow:    { flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:8, borderTopWidth:0.5, borderTopColor:'#F0F0F0', gap:6 },
+  historyExpenseRow:{ flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:8, borderTopWidth:0.5, borderTopColor:'#F0F0F0', gap:6 },
   historyWorker: { flex:1, fontSize:13, fontWeight:'600', color:'#1A1A2E' },
+  historyExpenseName:{ flex:1, fontSize:13, fontWeight:'600', color:'#1A1A2E' },
   historyDays:   { fontSize:12, color:Colors.textSecondary, width:52 },
   historyAmt:    { fontSize:13, fontWeight:'700', color:Colors.primary, width:64, textAlign:'right' },
   historyBal:    { fontSize:11, fontWeight:'600', width:72, textAlign:'right' },
