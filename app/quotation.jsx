@@ -16,204 +16,128 @@ import {
   View,
 } from "react-native";
 import { Colors } from "../constants/colors";
-import {
-  useClients,
-  useDeleteQuotation,
-  useProjects,
-  useQuotations,
-  useUpsertQuotation,
-} from "../hooks/useSupabase";
+import { InputStyles } from "../constants/theme";
+import { useClients, useProjects } from "../hooks/useSupabase";
+import { supabase } from "../lib/supabase";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { useAuthStore } from "../store/authStore";
 
-const INPUT = {
-  backgroundColor: "#FFFFFF",
-  borderWidth: 1,
-  borderColor: "#D1D5DB",
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 11,
-  fontSize: 15,
-  color: "#1A1A2E",
-};
-
 // ─── Work types with standard rates ──────────────────────
 const WORK_TYPES = [
-  // ── Wall preparation ──
   {
     key: "white_cement",
-    label: "⬜ White cement",
-    unit: "sqft",
+    label: "White cement",
     icon: "⬜",
-    defaultRate: 1.5,
-    desc: "White cement finish",
+    unit: "sqft",
+    rate: 1.5,
   },
   {
     key: "putty_2coat",
-    label: "🪣 Putty 2 coat",
-    unit: "sqft",
+    label: "Putty 2 coat",
     icon: "🪣",
-    defaultRate: 6,
-    desc: "2 coat wall putty",
+    unit: "sqft",
+    rate: 6,
   },
   {
     key: "putty_1coat",
-    label: "🪣 Putty 1 coat",
-    unit: "sqft",
+    label: "Putty 1 coat",
     icon: "🪣",
-    defaultRate: 3.5,
-    desc: "1 coat wall putty",
-  },
-  {
-    key: "primer",
-    label: "🖌 Primer",
     unit: "sqft",
-    icon: "🖌",
-    defaultRate: 4,
-    desc: "Wall primer coat",
+    rate: 3.5,
   },
-  // ── Interior painting ──
+  { key: "primer", label: "Primer", icon: "🖌", unit: "sqft", rate: 4 },
   {
     key: "interior_emulsion",
-    label: "🏠 Interior emulsion",
-    unit: "sqft",
+    label: "Interior emulsion",
     icon: "🏠",
-    defaultRate: 12,
-    desc: "2 coat interior emulsion",
+    unit: "sqft",
+    rate: 12,
   },
   {
     key: "interior_luxury",
-    label: "🏠 Interior luxury paint",
-    unit: "sqft",
+    label: "Interior luxury paint",
     icon: "🏠",
-    defaultRate: 18,
-    desc: "Premium interior paint",
+    unit: "sqft",
+    rate: 18,
   },
   {
     key: "ceiling_paint",
-    label: "⬆ Ceiling paint",
-    unit: "sqft",
+    label: "Ceiling paint",
     icon: "⬆",
-    defaultRate: 10,
-    desc: "Ceiling white paint",
+    unit: "sqft",
+    rate: 10,
   },
-  // ── Exterior painting ──
   {
     key: "exterior_emulsion",
-    label: "🏗 Exterior emulsion",
-    unit: "sqft",
+    label: "Exterior emulsion",
     icon: "🏗",
-    defaultRate: 14,
-    desc: "2 coat exterior emulsion",
+    unit: "sqft",
+    rate: 14,
   },
   {
     key: "exterior_weather",
-    label: "🏗 Weathershield",
-    unit: "sqft",
+    label: "Weathershield",
     icon: "🏗",
-    defaultRate: 22,
-    desc: "Weathershield exterior",
+    unit: "sqft",
+    rate: 22,
   },
-  // ── Special finishes ──
   {
     key: "texture_paint",
-    label: "🌀 Texture paint",
-    unit: "sqft",
+    label: "Texture paint",
     icon: "🌀",
-    defaultRate: 25,
-    desc: "Texture finish",
-  },
-  {
-    key: "stencil",
-    label: "🎨 Stencil design",
     unit: "sqft",
-    icon: "🎨",
-    defaultRate: 35,
-    desc: "Stencil wall art",
+    rate: 25,
   },
-  {
-    key: "wall_putty_polished",
-    label: "✨ Putty + polish finish",
-    unit: "sqft",
-    icon: "✨",
-    defaultRate: 20,
-    desc: "Putty with polished finish",
-  },
-  // ── Wood & metal ──
   {
     key: "wood_polish",
-    label: "🪵 Wood polish",
-    unit: "sqft",
+    label: "Wood polish",
     icon: "🪵",
-    defaultRate: 30,
-    desc: "Wood polish finish",
+    unit: "sqft",
+    rate: 30,
   },
   {
     key: "wood_enamel",
-    label: "🚪 Wood enamel paint",
-    unit: "sqft",
+    label: "Wood enamel",
     icon: "🚪",
-    defaultRate: 20,
-    desc: "Enamel on wood",
+    unit: "sqft",
+    rate: 20,
   },
   {
     key: "grill_paint",
-    label: "🔩 Grill / MS paint",
-    unit: "sqft",
+    label: "Grill / MS paint",
     icon: "🔩",
-    defaultRate: 15,
-    desc: "Metal grill painting",
+    unit: "sqft",
+    rate: 15,
   },
   {
     key: "window_door",
-    label: "🪟 Window / Door",
-    unit: "nos",
+    label: "Window / Door",
     icon: "🪟",
-    defaultRate: 350,
-    desc: "Per window or door",
+    unit: "nos",
+    rate: 350,
   },
-  // ── Waterproofing ──
   {
     key: "waterproofing",
-    label: "💧 Waterproofing",
-    unit: "sqft",
+    label: "Waterproofing",
     icon: "💧",
-    defaultRate: 18,
-    desc: "Waterproof coating",
-  },
-  {
-    key: "terrace_waterproof",
-    label: "🏛 Terrace waterproofing",
     unit: "sqft",
-    icon: "🏛",
-    defaultRate: 25,
-    desc: "Terrace waterproof",
+    rate: 18,
   },
-  // ── Full package ──
   {
     key: "full_interior",
-    label: "🏡 Full interior package",
-    unit: "sqft",
+    label: "Full interior package",
     icon: "🏡",
-    defaultRate: 28,
-    desc: "Putty + primer + 2 coat paint",
+    unit: "sqft",
+    rate: 28,
   },
   {
     key: "full_exterior",
-    label: "🏘 Full exterior package",
-    unit: "sqft",
+    label: "Full exterior package",
     icon: "🏘",
-    defaultRate: 35,
-    desc: "Primer + weathershield",
-  },
-  {
-    key: "custom",
-    label: "📝 Custom item",
     unit: "sqft",
-    icon: "📝",
-    defaultRate: 0,
-    desc: "",
+    rate: 35,
   },
+  { key: "custom", label: "Custom item", icon: "📝", unit: "sqft", rate: 0 },
 ];
 
 const STATUS_CONFIG = {
@@ -223,343 +147,405 @@ const STATUS_CONFIG = {
   rejected: { bg: "#FCEBEB", text: "#791F1F", dot: "#E74C3C" },
 };
 
-function genQuotationNo() {
-  const y = new Date().getFullYear();
-  const r = Math.floor(1000 + Math.random() * 9000);
-  return `QT-${y}-${r}`;
+function genNo() {
+  return `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-// ─── Quotation PDF Generator ──────────────────────────────
-const buildQuotationHTML = (quotation, items, client, project) => {
-  const subtotal = items.reduce((s, i) => s + Number(i.total_amount || 0), 0);
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/>
+// ─── Build PDF HTML ───────────────────────────────────────
+function buildPDF(quotation, items, client, project) {
+  const subtotal = items.reduce((s, i) => {
+    const isSqft = (i.unit ?? "sqft") === "sqft";
+    const t = isSqft
+      ? (Number(i.area_sqft) || 0) *
+        (Number(i.rate_per_sqft) || 0) *
+        (Number(i.quantity) || 1)
+      : (Number(i.rate_per_sqft) || 0) * (Number(i.quantity) || 1);
+    return s + t;
+  }, 0);
+
+  const rows = items
+    .map((item, idx) => {
+      const wt =
+        WORK_TYPES.find((w) => w.key === item.work_type) ??
+        WORK_TYPES[WORK_TYPES.length - 1];
+      const isSqft = (item.unit ?? "sqft") === "sqft";
+      const total = isSqft
+        ? (Number(item.area_sqft) || 0) *
+          (Number(item.rate_per_sqft) || 0) *
+          (Number(item.quantity) || 1)
+        : (Number(item.rate_per_sqft) || 0) * (Number(item.quantity) || 1);
+      return `<tr>
+      <td style="text-align:center;color:#6B7280">${idx + 1}</td>
+      <td><span style="background:#EFF6FF;color:#1E40AF;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">${wt.icon} ${wt.label}</span></td>
+      <td style="color:#4B5563">${item.description ?? ""}</td>
+      <td style="text-align:right">${isSqft ? Number(item.area_sqft || 0).toLocaleString("en-IN") : "—"}</td>
+      <td style="text-align:right">₹${Number(item.rate_per_sqft || 0).toLocaleString("en-IN")}</td>
+      <td style="text-align:center">${item.quantity ?? 1} ${item.unit ?? "sqft"}</td>
+      <td style="text-align:right;font-weight:700;color:#1E3A5F">₹${total.toLocaleString("en-IN")}</td>
+    </tr>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; padding: 32px; color: #1A1A2E; font-size: 13px; }
-  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
-  .brand  { font-size:26px; font-weight:900; color:#1E3A5F; }
-  .brand-sub { font-size:11px; color:#6B7280; letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
-  .qt-label { text-align:right; }
-  .qt-title { font-size:20px; font-weight:800; color:#1E3A5F; }
-  .qt-no    { font-size:14px; font-weight:700; color:#1A1A2E; margin-top:2px; }
-  .qt-date  { font-size:11px; color:#6B7280; margin-top:3px; }
-  .divider  { height:3px; background:#1E3A5F; margin:0 0 18px; border-radius:2px; }
-  .parties  { display:flex; justify-content:space-between; gap:16px; margin-bottom:20px; }
-  .party    { flex:1; background:#F8FAFC; border-radius:10px; padding:12px 14px; }
-  .party-lbl  { font-size:10px; color:#6B7280; text-transform:uppercase; letter-spacing:1.5px; font-weight:700; margin-bottom:5px; }
-  .party-name { font-size:15px; font-weight:700; color:#1A1A2E; margin-bottom:3px; }
-  .party-info { font-size:11px; color:#6B7280; line-height:1.7; }
-
-  /* Main quotation table */
-  table { width:100%; border-collapse:collapse; margin-bottom:18px; }
-  thead tr { background:#1E3A5F; }
-  th { color:#fff; padding:10px 10px; text-align:left; font-size:11px; font-weight:700; letter-spacing:0.3px; }
-  td { padding:10px 10px; border-bottom:1px solid #F0F0F0; font-size:12px; vertical-align:middle; }
-  tr:nth-child(even) td { background:#FAFBFC; }
-  tr:last-child td { border-bottom:none; }
-
-  /* Column alignments */
-  .col-no     { width:5%;  text-align:center; }
-  .col-work   { width:20%; font-weight:600; }
-  .col-desc   { width:28%; color:#4B5563; }
-  .col-area   { width:11%; text-align:right; }
-  .col-rate   { width:12%; text-align:right; }
-  .col-qty    { width:8%;  text-align:center; }
-  .col-unit   { width:6%;  text-align:center; color:#6B7280; font-size:11px; }
-  .col-amt    { width:14%; text-align:right; font-weight:700; color:#1E3A5F; }
-
-  .work-tag   { display:inline-block; background:#EFF6FF; color:#1E40AF; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; }
-
-  /* Totals */
-  .total-wrap { display:flex; justify-content:flex-end; margin-bottom:18px; }
-  .total-box  { width:260px; }
-  .t-row      { display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #F0F0F0; font-size:12px; }
-  .t-row.grand { background:#1E3A5F; color:#fff; font-size:15px; font-weight:800; border-radius:0 0 8px 8px; border:none; }
-
-  .validity   { background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:9px 13px; font-size:12px; color:#92400E; margin-bottom:14px; }
-  .notes-box  { background:#F5F6FA; border-radius:8px; padding:10px 12px; font-size:11px; color:#1A1A2E; margin-bottom:14px; line-height:1.7; }
-  .terms-box  { font-size:11px; color:#6B7280; line-height:1.9; margin-bottom:18px; }
-  .terms-box strong { color:#1A1A2E; }
-  .sign-row   { display:flex; justify-content:space-between; margin-top:36px; }
-  .sign-box   { text-align:center; width:42%; }
-  .sign-line  { border-top:1px solid #1A1A2E; padding-top:6px; font-size:11px; color:#6B7280; }
-  .footer     { text-align:center; font-size:10px; color:#9CA3AF; border-top:1px solid #E0E0E0; padding-top:12px; margin-top:18px; }
-</style>
-</head>
-<body>
-
-  <div class="header">
-    <div>
-      <div class="brand">🎨 PaintPro</div>
-      <div class="brand-sub">Painting Contractor</div>
-    </div>
-    <div class="qt-label">
-      <div class="qt-title">QUOTATION</div>
-      <div class="qt-no">${quotation.quotation_no}</div>
-      <div class="qt-date">Date: ${formatDate(quotation.quotation_date)}</div>
-      ${quotation.valid_until ? `<div class="qt-date">Valid until: ${formatDate(quotation.valid_until)}</div>` : ""}
-    </div>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;padding:32px;color:#1A1A2E;font-size:13px}
+.header{display:flex;justify-content:space-between;margin-bottom:20px}
+.brand{font-size:26px;font-weight:900;color:#1E3A5F}
+.brand-sub{font-size:11px;color:#6B7280;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.divider{height:3px;background:#1E3A5F;margin:0 0 18px;border-radius:2px}
+.parties{display:flex;gap:16px;margin-bottom:20px}
+.party{flex:1;background:#F8FAFC;border-radius:8px;padding:12px}
+.plbl{font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:5px}
+.pname{font-size:15px;font-weight:700;margin-bottom:3px}
+.pinfo{font-size:11px;color:#6B7280;line-height:1.7}
+table{width:100%;border-collapse:collapse;margin-bottom:18px}
+thead tr{background:#1E3A5F}
+th{color:#fff;padding:9px 10px;text-align:left;font-size:11px;font-weight:700}
+td{padding:9px 10px;border-bottom:1px solid #F0F0F0;font-size:12px;vertical-align:middle}
+tr:nth-child(even) td{background:#FAFBFC}
+.total-wrap{display:flex;justify-content:flex-end;margin-bottom:16px}
+.total-box{width:240px;border:1px solid #E0E0E0;border-radius:8px;overflow:hidden}
+.trow{display:flex;justify-content:space-between;padding:9px 13px;border-bottom:1px solid #F0F0F0;font-size:12px}
+.trow.grand{background:#1E3A5F;color:#fff;font-size:15px;font-weight:800;border:none}
+.sign-row{display:flex;justify-content:space-between;margin-top:36px}
+.sign-box{text-align:center;width:42%}
+.sign-line{border-top:1px solid #1A1A2E;padding-top:6px;font-size:11px;color:#6B7280}
+.footer{text-align:center;font-size:10px;color:#9CA3AF;border-top:1px solid #E0E0E0;padding-top:12px;margin-top:18px}
+</style></head><body>
+<div class="header">
+  <div><div class="brand">🎨 PaintPro</div><div class="brand-sub">Painting Contractor</div></div>
+  <div style="text-align:right">
+    <div style="font-size:20px;font-weight:800;color:#1E3A5F">QUOTATION</div>
+    <div style="font-size:14px;font-weight:700;margin-top:2px">${quotation.quotation_no}</div>
+    <div style="font-size:11px;color:#6B7280;margin-top:3px">Date: ${formatDate(quotation.quotation_date)}</div>
+    ${quotation.valid_until ? `<div style="font-size:11px;color:#6B7280">Valid until: ${formatDate(quotation.valid_until)}</div>` : ""}
   </div>
-  <div class="divider"></div>
-
-  <div class="parties">
-    <div class="party">
-      <div class="party-lbl">Prepared for</div>
-      <div class="party-name">${client?.name ?? "Client"}</div>
-      <div class="party-info">
-        ${client?.phone ? `📞 ${client.phone}<br/>` : ""}
-        ${client?.address ? `📍 ${client.address}` : ""}
-      </div>
-    </div>
-    <div class="party">
-      <div class="party-lbl">Project</div>
-      <div class="party-name">${project?.title ?? "—"}</div>
-      <div class="party-info">${project?.location ?? ""}</div>
-    </div>
+</div>
+<div class="divider"></div>
+<div class="parties">
+  <div class="party">
+    <div class="plbl">Prepared for</div>
+    <div class="pname">${client?.name ?? "Client"}</div>
+    <div class="pinfo">${client?.phone ? "📞 " + client.phone + "<br/>" : ""}${client?.address ? "📍 " + client.address : ""}</div>
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th class="col-no">#</th>
-        <th class="col-work">Type of work</th>
-        <th class="col-desc">Description</th>
-        <th class="col-area">Area (sqft)</th>
-        <th class="col-rate">Rate / sqft</th>
-        <th class="col-qty">Qty</th>
-        <th class="col-unit">Unit</th>
-        <th class="col-amt">Amount (₹)</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${items
-        .map((item, idx) => {
-          const wt = WORK_TYPES.find((w) => w.key === item.work_type);
-          const total = Number(item.total_amount || 0);
-          const isSqft = (item.unit ?? "sqft") === "sqft";
-          return `
-          <tr>
-            <td class="col-no">${idx + 1}</td>
-            <td class="col-work">
-              <span class="work-tag">${wt?.icon ?? "📝"} ${wt?.label?.replace(/^[^\s]+\s/, "") ?? item.work_type}</span>
-            </td>
-            <td class="col-desc">${item.description ?? ""}</td>
-            <td class="col-area">${isSqft ? Number(item.area_sqft ?? 0).toLocaleString("en-IN") : "—"}</td>
-            <td class="col-rate">₹${Number(item.rate_per_sqft ?? 0).toLocaleString("en-IN")}</td>
-            <td class="col-qty">${item.quantity ?? 1}</td>
-            <td class="col-unit">${item.unit ?? "sqft"}</td>
-            <td class="col-amt">₹${total.toLocaleString("en-IN")}</td>
-          </tr>`;
-        })
-        .join("")}
-    </tbody>
-  </table>
-
-  <div class="total-wrap">
-    <div class="total-box">
-      <div class="t-row"><span>Subtotal</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
-      <div class="t-row grand"><span>Grand Total</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
-    </div>
+  <div class="party">
+    <div class="plbl">Project site</div>
+    <div class="pname">${project?.title ?? "—"}</div>
+    <div class="pinfo">${project?.location ?? ""}</div>
   </div>
-
-  ${quotation.valid_until ? `<div class="validity">⏰ This quotation is valid until <strong>${formatDate(quotation.valid_until)}</strong></div>` : ""}
-  ${quotation.notes ? `<div class="notes-box"><strong>Notes:</strong> ${quotation.notes}</div>` : ""}
-  ${quotation.terms ? `<div class="terms-box"><strong>Terms & Conditions:</strong><br/>${quotation.terms}</div>` : ""}
-
-  <div class="sign-row">
-    <div class="sign-box"><div class="sign-line">Client signature & date</div></div>
-    <div class="sign-box"><div class="sign-line">Contractor signature & date</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th style="width:5%;text-align:center">#</th>
+    <th style="width:20%">Type of work</th>
+    <th style="width:26%">Description</th>
+    <th style="width:11%;text-align:right">Area (sqft)</th>
+    <th style="width:12%;text-align:right">Rate/sqft (₹)</th>
+    <th style="width:12%;text-align:center">Qty / Unit</th>
+    <th style="width:14%;text-align:right">Amount (₹)</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="total-wrap">
+  <div class="total-box">
+    <div class="trow"><span>Subtotal</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
+    <div class="trow grand"><span>Grand Total</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
   </div>
+</div>
+${quotation.notes ? `<div style="background:#F5F6FA;border-radius:8px;padding:10px 12px;font-size:11px;margin-bottom:14px"><strong>Notes:</strong> ${quotation.notes}</div>` : ""}
+${quotation.terms ? `<div style="font-size:11px;color:#6B7280;line-height:1.9;margin-bottom:16px"><strong style="color:#1A1A2E">Terms & Conditions:</strong><br/>${quotation.terms}</div>` : ""}
+<div class="sign-row">
+  <div class="sign-box"><div class="sign-line">Client signature & date</div></div>
+  <div class="sign-box"><div class="sign-line">Contractor signature & date</div></div>
+</div>
+<div class="footer">PaintPro · Quotation ${quotation.quotation_no} · ${new Date().toLocaleDateString("en-IN")}</div>
+</body></html>`;
+}
 
-  <div class="footer">PaintPro Business Tracker &nbsp;·&nbsp; Quotation ${quotation.quotation_no} &nbsp;·&nbsp; ${new Date().toLocaleDateString("en-IN")}</div>
-</body>
-</html>`;
-};
+// ─── Work Item Row ────────────────────────────────────────
+function ItemRow({ item, index, onChange, onRemove }) {
+  const [typeOpen, setTypeOpen] = useState(false);
+  const wt = WORK_TYPES.find((w) => w.key === item.work_type) ?? WORK_TYPES[0];
+  const isSqft = (item.unit ?? "sqft") === "sqft";
+  const total = isSqft
+    ? (parseFloat(item.area_sqft) || 0) *
+      (parseFloat(item.rate) || 0) *
+      (parseFloat(item.quantity) || 1)
+    : (parseFloat(item.rate) || 0) * (parseFloat(item.quantity) || 1);
 
-// ─── Quotation Card ───────────────────────────────────────
-function QuotationCard({ qt, onPress, onShare, onDelete }) {
-  const s = STATUS_CONFIG[qt.status] ?? STATUS_CONFIG.draft;
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <View style={styles.cardTop}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardNo}>{qt.quotation_no}</Text>
-          <Text style={styles.cardClient} numberOfLines={1}>
-            👤 {qt.clients?.name ?? "No client"}
+    <View style={styles.itemBox}>
+      {/* Row header */}
+      <View style={styles.itemHead}>
+        <Text style={styles.itemNum}>#{index + 1}</Text>
+        <TouchableOpacity
+          style={styles.typePill}
+          onPress={() => setTypeOpen(!typeOpen)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.typePillText} numberOfLines={1}>
+            {wt.icon} {wt.label}
           </Text>
-          <Text style={styles.cardProject} numberOfLines={1}>
-            📋 {qt.projects?.title ?? "No project"}
-          </Text>
-          <Text style={styles.cardDate}>
-            📅 {formatDate(qt.quotation_date)}
-          </Text>
+          <Text style={styles.typeArrow}>{typeOpen ? "▲" : "▼"}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onRemove} style={styles.removeBtn}>
+          <Text style={{ color: Colors.danger, fontSize: 18 }}>✕</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Type dropdown */}
+      {typeOpen && (
+        <View style={styles.typeDropdown}>
+          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+            {WORK_TYPES.map((w) => (
+              <TouchableOpacity
+                key={w.key}
+                style={[
+                  styles.typeDropItem,
+                  item.work_type === w.key && styles.typeDropItemActive,
+                ]}
+                onPress={() => {
+                  onChange("work_type", w.key);
+                  onChange("unit", w.unit);
+                  if (w.rate > 0) onChange("rate", w.rate.toString());
+                  setTypeOpen(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.typeDropText,
+                    item.work_type === w.key && {
+                      color: Colors.primary,
+                      fontWeight: "700",
+                    },
+                  ]}
+                >
+                  {w.icon} {w.label}
+                </Text>
+                {w.rate > 0 && (
+                  <Text style={styles.typeDropRate}>
+                    ₹{w.rate}/{w.unit}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
-        <View style={{ alignItems: "flex-end", gap: 8 }}>
-          <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-            <View style={[styles.statusDot, { backgroundColor: s.dot }]} />
-            <Text style={[styles.statusText, { color: s.text }]}>
-              {qt.status.charAt(0).toUpperCase() + qt.status.slice(1)}
-            </Text>
+      )}
+
+      {/* Description */}
+      <TextInput
+        style={[InputStyles, { marginBottom: 8 }]}
+        value={item.description}
+        onChangeText={(v) => onChange("description", v)}
+        placeholder="Description / details"
+        placeholderTextColor="#9CA3AF"
+        underlineColorAndroid="transparent"
+      />
+
+      {/* Fields */}
+      <View style={styles.itemFields}>
+        {isSqft && (
+          <View style={styles.itemField}>
+            <Text style={styles.fieldLbl}>Area (sqft)</Text>
+            <TextInput
+              style={[InputStyles, styles.fieldInput]}
+              value={item.area_sqft}
+              onChangeText={(v) => onChange("area_sqft", v)}
+              placeholder="0"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              underlineColorAndroid="transparent"
+            />
           </View>
-          <TouchableOpacity style={styles.shareBtn} onPress={() => onShare(qt)}>
-            <Text style={styles.shareBtnText}>↗ Share PDF</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(qt.id)}>
-            <Text style={{ color: Colors.danger, fontSize: 13 }}>
-              🗑 Delete
-            </Text>
-          </TouchableOpacity>
+        )}
+        <View style={styles.itemField}>
+          <Text style={styles.fieldLbl}>Rate / {item.unit ?? "sqft"} (₹)</Text>
+          <TextInput
+            style={[InputStyles, styles.fieldInput]}
+            value={item.rate}
+            onChangeText={(v) => onChange("rate", v)}
+            placeholder="0"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            underlineColorAndroid="transparent"
+          />
+        </View>
+        <View style={styles.itemField}>
+          <Text style={styles.fieldLbl}>Qty</Text>
+          <TextInput
+            style={[InputStyles, styles.fieldInput]}
+            value={item.quantity}
+            onChangeText={(v) => onChange("quantity", v)}
+            placeholder="1"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            underlineColorAndroid="transparent"
+          />
+        </View>
+        <View style={[styles.itemField, styles.amtField]}>
+          <Text style={styles.fieldLbl}>Amount</Text>
+          <Text style={styles.amtText}>{formatCurrency(total)}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 // ─── Quotation Modal ──────────────────────────────────────
-function QuotationModal({ visible, onClose, quotation }) {
-  const upsert = useUpsertQuotation();
+function QuotationModal({ visible, onClose, quotation, onSaved }) {
   const { data: projects } = useProjects();
   const { data: clients } = useClients();
   const profile = useAuthStore((s) => s.profile);
   const isEdit = !!quotation?.id;
 
-  const [quotationNo, setQuotationNo] = useState("");
-  const [quotationDate, setQuotationDate] = useState("");
-  const [validUntil, setValidUntil] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [qtNo, setQtNo] = useState("");
+  const [qtDate, setQtDate] = useState("");
+  const [validTill, setValidTill] = useState("");
+  const [projId, setProjId] = useState("");
   const [clientId, setClientId] = useState("");
   const [status, setStatus] = useState("draft");
   const [notes, setNotes] = useState("");
-  const [terms, setTerms] = useState(
-    "Payment: 50% advance, 50% on completion.",
-  );
+  const [terms, setTerms] = useState("50% advance, balance on completion.");
   const [items, setItems] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [projectOpen, setProjectOpen] = useState(false);
+  const [projOpen, setProjOpen] = useState(false);
   const [clientOpen, setClientOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
 
+  const newItem = () => ({
+    work_type: "interior_emulsion",
+    description: "",
+    area_sqft: "",
+    rate: "12",
+    quantity: "1",
+    unit: "sqft",
+  });
+
   useEffect(() => {
-    if (visible) {
-      setQuotationNo(quotation?.quotation_no ?? genQuotationNo());
-      setQuotationDate(
-        quotation?.quotation_date ?? new Date().toISOString().split("T")[0],
-      );
-      setValidUntil(quotation?.valid_until ?? "");
-      setProjectId(quotation?.project_id ?? "");
-      setClientId(quotation?.client_id ?? "");
-      setStatus(quotation?.status ?? "draft");
-      setNotes(quotation?.notes ?? "");
-      setTerms(quotation?.terms ?? "Payment: 50% advance, 50% on completion.");
+    if (!visible) return;
+    setQtNo(quotation?.quotation_no ?? genNo());
+    setQtDate(
+      quotation?.quotation_date ?? new Date().toISOString().split("T")[0],
+    );
+    setValidTill(quotation?.valid_until ?? "");
+    setProjId(quotation?.project_id ?? "");
+    setClientId(quotation?.client_id ?? "");
+    setStatus(quotation?.status ?? "draft");
+    setNotes(quotation?.notes ?? "");
+    setTerms(quotation?.terms ?? "50% advance, balance on completion.");
+    setProjOpen(false);
+    setClientOpen(false);
+    setStatusOpen(false);
+
+    if (quotation?.quotation_items?.length) {
       setItems(
-        quotation?.quotation_items?.length
-          ? quotation.quotation_items.map((i) => ({
-              work_type: i.work_type,
-              description: i.description ?? "",
-              area_sqft: i.area_sqft?.toString() ?? "0",
-              rate_per_sqft: i.rate_per_sqft?.toString() ?? "0",
-              quantity: i.quantity?.toString() ?? "1",
-              unit: i.unit ?? "sqft",
-            }))
-          : [
-              {
-                work_type: "interior_wall",
-                description: "",
-                area_sqft: "",
-                rate_per_sqft: "",
-                quantity: "1",
-                unit: "sqft",
-              },
-            ],
+        quotation.quotation_items.map((i) => ({
+          work_type: i.work_type ?? "custom",
+          description: i.description ?? "",
+          area_sqft: (i.area_sqft ?? 0).toString(),
+          rate: (i.rate_per_sqft ?? 0).toString(),
+          quantity: (i.quantity ?? 1).toString(),
+          unit: i.unit ?? "sqft",
+        })),
       );
-      setProjectOpen(false);
-      setClientOpen(false);
-      setStatusOpen(false);
+    } else {
+      setItems([newItem()]);
     }
-  }, [visible, quotation]);
+  }, [visible, quotation?.id]);
 
-  // Auto-fill client when project selected
+  // Auto-fill client from project
   useEffect(() => {
-    if (projectId && !isEdit) {
-      const proj = projects?.find((p) => p.id === projectId);
-      if (proj?.client_id) setClientId(proj.client_id);
+    if (projId && !isEdit) {
+      const p = projects?.find((p) => p.id === projId);
+      if (p?.client_id) setClientId(p.client_id);
     }
-  }, [projectId, projects]);
+  }, [projId]);
 
-  const addItem = () =>
-    setItems((prev) => [
-      ...prev,
-      {
-        work_type: "interior_wall",
-        description: "",
-        area_sqft: "",
-        rate_per_sqft: "",
-        quantity: "1",
-        unit: "sqft",
-      },
-    ]);
-
-  const removeItem = (i) =>
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
   const updateItem = (i, key, val) =>
     setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [key]: val } : item)),
+      prev.map((it, idx) => (idx === i ? { ...it, [key]: val } : it)),
     );
 
-  const grandTotal = items.reduce((s, item) => {
-    const isSqft = (item.unit ?? "sqft") === "sqft";
-    const t = isSqft
-      ? (parseFloat(item.area_sqft) || 0) *
-        (parseFloat(item.rate_per_sqft) || 0) *
-        (parseFloat(item.quantity) || 1)
-      : (parseFloat(item.rate_per_sqft) || 0) *
-        (parseFloat(item.quantity) || 1);
-    return s + t;
+  const grandTotal = items.reduce((s, it) => {
+    const isSqft = (it.unit ?? "sqft") === "sqft";
+    return (
+      s +
+      (isSqft
+        ? (parseFloat(it.area_sqft) || 0) *
+          (parseFloat(it.rate) || 0) *
+          (parseFloat(it.quantity) || 1)
+        : (parseFloat(it.rate) || 0) * (parseFloat(it.quantity) || 1))
+    );
   }, 0);
 
-  const selectedProject = projects?.find((p) => p.id === projectId);
-  const selectedClient = clients?.find((c) => c.id === clientId);
+  const selProject = projects?.find((p) => p.id === projId);
+  const selClient = clients?.find((c) => c.id === clientId);
 
   const handleSave = async () => {
-    if (!projectId) {
-      Alert.alert("Required", "Please select a project");
+    if (!projId) {
+      Alert.alert("Required", "Select a project");
       return;
     }
-    if (items.length === 0) {
-      Alert.alert("Required", "Add at least one work item");
+    if (!items.length) {
+      Alert.alert("Required", "Add at least one item");
       return;
     }
     setSaving(true);
     try {
-      await upsert.mutateAsync({
-        quotation: {
-          ...(isEdit ? { id: quotation.id } : {}),
-          quotation_no: quotationNo,
-          quotation_date: quotationDate,
-          valid_until: validUntil || null,
-          project_id: projectId,
-          client_id: clientId || null,
-          status,
-          notes,
-          terms,
-          created_by: profile?.id,
-        },
-        items: items.map((item) => ({
-          work_type: item.work_type,
-          description: item.description || null,
-          area_sqft: parseFloat(item.area_sqft) || 0,
-          rate_per_sqft: parseFloat(item.rate_per_sqft) || 0,
-          quantity: parseFloat(item.quantity) || 1,
-          unit: item.unit ?? "sqft",
-        })),
-      });
+      // Upsert quotation
+      const qtPayload = {
+        quotation_no: qtNo,
+        quotation_date: qtDate,
+        valid_until: validTill || null,
+        project_id: projId,
+        client_id: clientId || null,
+        status,
+        notes,
+        terms,
+        created_by: profile?.id,
+      };
+
+      let qtId = quotation?.id;
+      if (isEdit) {
+        const { error } = await supabase
+          .from("quotations")
+          .update(qtPayload)
+          .eq("id", qtId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("quotations")
+          .insert(qtPayload)
+          .select()
+          .single();
+        if (error) throw error;
+        qtId = data.id;
+      }
+
+      // Delete old items and re-insert
+      await supabase.from("quotation_items").delete().eq("quotation_id", qtId);
+      const itemPayloads = items
+        .filter((it) => it.rate)
+        .map((it, i) => ({
+          quotation_id: qtId,
+          work_type: it.work_type,
+          description: it.description || null,
+          area_sqft: parseFloat(it.area_sqft) || 0,
+          rate_per_sqft: parseFloat(it.rate) || 0,
+          quantity: parseFloat(it.quantity) || 1,
+          unit: it.unit ?? "sqft",
+          sort_order: i,
+        }));
+      if (itemPayloads.length) {
+        const { error } = await supabase
+          .from("quotation_items")
+          .insert(itemPayloads);
+        if (error) throw error;
+      }
+
+      onSaved();
       onClose();
     } catch (e) {
       Alert.alert("Error", e.message);
@@ -568,6 +554,22 @@ function QuotationModal({ visible, onClose, quotation }) {
     }
   };
 
+  const Picker = ({ label, open, toggle, display, placeholder, children }) => (
+    <View style={{ marginBottom: 4 }}>
+      <Text style={LabelStyles}>{label}</Text>
+      <TouchableOpacity style={styles.picker} onPress={toggle}>
+        <Text
+          style={display ? styles.pickerVal : styles.pickerPh}
+          numberOfLines={1}
+        >
+          {display ?? placeholder}
+        </Text>
+        <Text style={styles.pickerArrow}>{open ? "▲" : "▼"}</Text>
+      </TouchableOpacity>
+      {open && <View style={styles.dropdown}>{children}</View>}
+    </View>
+  );
+
   return (
     <Modal
       visible={visible}
@@ -575,10 +577,10 @@ function QuotationModal({ visible, onClose, quotation }) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
+      <View style={styles.modal}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose} style={styles.modalClose}>
-            <Text style={styles.closeText}>✕</Text>
+          <TouchableOpacity onPress={onClose} style={{ padding: 4, width: 32 }}>
+            <Text style={{ fontSize: 18, color: Colors.textSecondary }}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.modalTitle}>
             {isEdit ? "Edit quotation" : "New quotation"}
@@ -595,27 +597,27 @@ function QuotationModal({ visible, onClose, quotation }) {
         </View>
 
         <ScrollView
-          style={styles.modalBody}
+          style={{ flex: 1, padding: 16 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header fields */}
+          {/* Qt no + date */}
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Quotation no.</Text>
+              <Text style={LabelStyles}>Quotation no.</Text>
               <TextInput
-                style={INPUT}
-                value={quotationNo}
-                onChangeText={setQuotationNo}
+                style={InputStyles}
+                value={qtNo}
+                onChangeText={setQtNo}
                 underlineColorAndroid="transparent"
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Date</Text>
+              <Text style={LabelStyles}>Date</Text>
               <TextInput
-                style={INPUT}
-                value={quotationDate}
-                onChangeText={setQuotationDate}
+                style={InputStyles}
+                value={qtDate}
+                onChangeText={setQtDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numbers-and-punctuation"
@@ -624,238 +626,196 @@ function QuotationModal({ visible, onClose, quotation }) {
             </View>
           </View>
 
-          <Text style={styles.label}>Valid until</Text>
+          <Text style={LabelStyles}>Valid until (optional)</Text>
           <TextInput
-            style={INPUT}
-            value={validUntil}
-            onChangeText={setValidUntil}
-            placeholder="YYYY-MM-DD (optional)"
+            style={InputStyles}
+            value={validTill}
+            onChangeText={setValidTill}
+            placeholder="YYYY-MM-DD"
             placeholderTextColor="#9CA3AF"
             keyboardType="numbers-and-punctuation"
             underlineColorAndroid="transparent"
           />
 
           {/* Project */}
-          <Text style={styles.label}>Project *</Text>
-          <TouchableOpacity
-            style={styles.picker}
-            onPress={() => {
-              setProjectOpen(!projectOpen);
+          <Picker
+            label="Project *"
+            open={projOpen}
+            toggle={() => {
+              setProjOpen(!projOpen);
               setClientOpen(false);
               setStatusOpen(false);
             }}
+            display={selProject?.title}
+            placeholder="Select project"
           >
-            <Text
-              style={
-                selectedProject ? styles.pickerValue : styles.pickerPlaceholder
-              }
-            >
-              {selectedProject?.title ?? "Select project"}
-            </Text>
-            <Text style={styles.pickerArrow}>{projectOpen ? "▲" : "▼"}</Text>
-          </TouchableOpacity>
-          {projectOpen && (
-            <View style={styles.dropdown}>
-              {(projects ?? []).map((p) => (
-                <TouchableOpacity
-                  key={p.id}
+            {(projects ?? []).map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[
+                  styles.dropItem,
+                  projId === p.id && styles.dropItemActive,
+                ]}
+                onPress={() => {
+                  setProjId(p.id);
+                  setProjOpen(false);
+                }}
+              >
+                <Text
                   style={[
-                    styles.dropItem,
-                    projectId === p.id && styles.dropItemActive,
+                    styles.dropText,
+                    projId === p.id && {
+                      color: Colors.primary,
+                      fontWeight: "700",
+                    },
                   ]}
-                  onPress={() => {
-                    setProjectId(p.id);
-                    setProjectOpen(false);
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.dropText,
-                      projectId === p.id && {
-                        color: Colors.primary,
-                        fontWeight: "700",
-                      },
-                    ]}
-                  >
-                    {p.title}
-                  </Text>
-                  {p.location ? (
-                    <Text style={styles.dropSub}>📍 {p.location}</Text>
-                  ) : null}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+                  {p.title}
+                </Text>
+                {p.location ? (
+                  <Text style={styles.dropSub}>📍 {p.location}</Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </Picker>
 
           {/* Client */}
-          <Text style={styles.label}>Client</Text>
-          <TouchableOpacity
-            style={styles.picker}
-            onPress={() => {
+          <Picker
+            label="Client"
+            open={clientOpen}
+            toggle={() => {
               setClientOpen(!clientOpen);
-              setProjectOpen(false);
+              setProjOpen(false);
               setStatusOpen(false);
             }}
+            display={selClient?.name}
+            placeholder="Select client (auto from project)"
           >
-            <Text
-              style={
-                selectedClient ? styles.pickerValue : styles.pickerPlaceholder
-              }
-            >
-              {selectedClient?.name ??
-                "Select client (auto-filled from project)"}
-            </Text>
-            <Text style={styles.pickerArrow}>{clientOpen ? "▲" : "▼"}</Text>
-          </TouchableOpacity>
-          {clientOpen && (
-            <View style={styles.dropdown}>
-              {(clients ?? []).map((c) => (
-                <TouchableOpacity
-                  key={c.id}
+            {(clients ?? []).map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={[
+                  styles.dropItem,
+                  clientId === c.id && styles.dropItemActive,
+                ]}
+                onPress={() => {
+                  setClientId(c.id);
+                  setClientOpen(false);
+                }}
+              >
+                <Text
                   style={[
-                    styles.dropItem,
-                    clientId === c.id && styles.dropItemActive,
+                    styles.dropText,
+                    clientId === c.id && {
+                      color: Colors.primary,
+                      fontWeight: "700",
+                    },
                   ]}
-                  onPress={() => {
-                    setClientId(c.id);
-                    setClientOpen(false);
-                  }}
                 >
+                  {c.name}
+                </Text>
+                {c.phone ? (
+                  <Text style={styles.dropSub}>📞 {c.phone}</Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </Picker>
+
+          {/* Status */}
+          <Picker
+            label="Status"
+            open={statusOpen}
+            toggle={() => {
+              setStatusOpen(!statusOpen);
+              setProjOpen(false);
+              setClientOpen(false);
+            }}
+            display={status.charAt(0).toUpperCase() + status.slice(1)}
+            placeholder=""
+          >
+            {Object.keys(STATUS_CONFIG).map((k) => (
+              <TouchableOpacity
+                key={k}
+                style={[styles.dropItem, status === k && styles.dropItemActive]}
+                onPress={() => {
+                  setStatus(k);
+                  setStatusOpen(false);
+                }}
+              >
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <View
+                    style={[
+                      styles.dot,
+                      { backgroundColor: STATUS_CONFIG[k].dot },
+                    ]}
+                  />
                   <Text
                     style={[
                       styles.dropText,
-                      clientId === c.id && {
+                      status === k && {
                         color: Colors.primary,
                         fontWeight: "700",
                       },
                     ]}
                   >
-                    {c.name}
+                    {k.charAt(0).toUpperCase() + k.slice(1)}
                   </Text>
-                  {c.phone ? (
-                    <Text style={styles.dropSub}>📞 {c.phone}</Text>
-                  ) : null}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Status */}
-          <Text style={styles.label}>Status</Text>
-          <TouchableOpacity
-            style={styles.picker}
-            onPress={() => {
-              setStatusOpen(!statusOpen);
-              setProjectOpen(false);
-              setClientOpen(false);
-            }}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-            >
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: STATUS_CONFIG[status]?.dot },
-                ]}
-              />
-              <Text style={styles.pickerValue}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Text>
-            </View>
-            <Text style={styles.pickerArrow}>{statusOpen ? "▲" : "▼"}</Text>
-          </TouchableOpacity>
-          {statusOpen && (
-            <View style={styles.dropdown}>
-              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.dropItem,
-                    status === key && styles.dropItemActive,
-                  ]}
-                  onPress={() => {
-                    setStatus(key);
-                    setStatusOpen(false);
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <View
-                      style={[styles.statusDot, { backgroundColor: cfg.dot }]}
-                    />
-                    <Text
-                      style={[
-                        styles.dropText,
-                        status === key && {
-                          color: Colors.primary,
-                          fontWeight: "700",
-                        },
-                      ]}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </Picker>
 
           {/* Work items */}
           <View style={styles.itemsHeader}>
             <Text style={styles.itemsTitle}>Work items</Text>
-            <TouchableOpacity style={styles.addItemBtn} onPress={addItem}>
+            <TouchableOpacity
+              style={styles.addItemBtn}
+              onPress={() => setItems((prev) => [...prev, newItem()])}
+            >
               <Text style={styles.addItemText}>+ Add item</Text>
             </TouchableOpacity>
           </View>
 
           {items.map((item, i) => (
-            <WorkItemRow
+            <ItemRow
               key={i}
               item={item}
               index={i}
               onChange={(key, val) => updateItem(i, key, val)}
-              onRemove={() => removeItem(i)}
+              onRemove={() =>
+                setItems((prev) => prev.filter((_, idx) => idx !== i))
+              }
             />
           ))}
 
           {/* Grand total */}
           {grandTotal > 0 && (
-            <View style={styles.grandTotalBox}>
-              <View style={styles.grandTotalRow}>
-                <Text style={styles.grandTotalLabel}>
-                  Total items: {items.length}
-                </Text>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.grandTotalSub}>Grand Total Estimate</Text>
-                  <Text style={styles.grandTotalValue}>
-                    {formatCurrency(grandTotal)}
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.grandBox}>
+              <Text style={styles.grandLabel}>
+                {items.length} items · Grand total estimate
+              </Text>
+              <Text style={styles.grandValue}>
+                {formatCurrency(grandTotal)}
+              </Text>
             </View>
           )}
 
-          {/* Notes & Terms */}
-          <Text style={styles.label}>Notes</Text>
+          <Text style={LabelStyles}>Notes</Text>
           <TextInput
-            style={[INPUT, { height: 72, textAlignVertical: "top" }]}
+            style={[InputStyles, { height: 72, textAlignVertical: "top" }]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Additional notes for client..."
+            placeholder="Notes for client..."
             placeholderTextColor="#9CA3AF"
             multiline
             underlineColorAndroid="transparent"
           />
 
-          <Text style={styles.label}>Terms & Conditions</Text>
+          <Text style={LabelStyles}>Terms & conditions</Text>
           <TextInput
-            style={[INPUT, { height: 88, textAlignVertical: "top" }]}
+            style={[INPUT, { height: 80, textAlignVertical: "top" }]}
             value={terms}
             onChangeText={setTerms}
             multiline
@@ -873,22 +833,40 @@ function QuotationModal({ visible, onClose, quotation }) {
 export default function QuotationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const projectId = params.projectId ?? null;
-  const projectTitle = params.projectTitle ?? "All Projects";
+  const projId = params.projectId ?? null;
+  const projTitle = params.projectTitle ?? "All Projects";
 
-  const [selProject, setSelProject] = useState(projectId);
+  const [filter, setFilter] = useState(projId);
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [generating, setGenerating] = useState(null);
-
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { data: projects } = useProjects();
-  const {
-    data: quotations,
-    isLoading,
-    refetch,
-    isRefetching,
-  } = useQuotations(selProject);
-  const deleteQt = useDeleteQuotation();
+
+  const fetchQuotations = async () => {
+    try {
+      let q = supabase
+        .from("quotations")
+        .select(
+          "*, clients(name,phone), projects(title,location), quotation_items(*)",
+        )
+        .order("created_at", { ascending: false });
+      if (filter) q = q.eq("project_id", filter);
+      const { data, error } = await q;
+      if (error) throw error;
+      setQuotations(data ?? []);
+    } catch (e) {
+      console.log("Quotation fetch error:", e.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuotations();
+  }, [filter]);
 
   const handleDelete = (id) => {
     Alert.alert("Delete", "Delete this quotation?", [
@@ -896,67 +874,43 @@ export default function QuotationScreen() {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => deleteQt.mutate(id),
+        onPress: async () => {
+          await supabase.from("quotations").delete().eq("id", id);
+          fetchQuotations();
+        },
       },
     ]);
   };
 
   const handleShare = async (qt) => {
-    setGenerating(qt.id);
     try {
-      const { data: full } = await useQuotation(qt.id);
-      const items = full?.quotation_items ?? [];
-      const html = buildQuotationHTML(
-        full,
-        items,
-        full?.clients,
-        full?.projects,
-      );
+      const items = qt.quotation_items ?? [];
+      const html = buildPDF(qt, items, qt.clients, qt.projects);
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
         dialogTitle: `Quotation ${qt.quotation_no}`,
       });
     } catch (e) {
-      // Fallback: fetch separately
-      try {
-        const { supabase } = require("../lib/supabase");
-        const { data: full } = await supabase
-          .from("quotations")
-          .select("*, clients(*), projects(*), quotation_items(*)")
-          .eq("id", qt.id)
-          .single();
-        const html = buildQuotationHTML(
-          full,
-          full.quotation_items ?? [],
-          full.clients,
-          full.projects,
-        );
-        const { uri } = await Print.printToFileAsync({ html });
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/pdf",
-          dialogTitle: `Quotation ${qt.quotation_no}`,
-        });
-      } catch (e2) {
-        Alert.alert("Error", e2.message);
-      }
-    } finally {
-      setGenerating(null);
+      Alert.alert("Error", e.message);
     }
   };
+
+  const s = (st) => STATUS_CONFIG[st] ?? STATUS_CONFIG.draft;
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
-
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
+            ← Back
+          </Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Quotations</Text>
           <Text style={styles.headerSub} numberOfLines={1}>
-            {projectTitle}
+            {projTitle}
           </Text>
         </View>
         <TouchableOpacity
@@ -970,7 +924,8 @@ export default function QuotationScreen() {
         </TouchableOpacity>
       </View>
 
-      {!projectId && (
+      {/* Project filter chips */}
+      {!projId && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -978,25 +933,23 @@ export default function QuotationScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
         >
           <TouchableOpacity
-            style={[styles.chip, !selProject && styles.chipActive]}
-            onPress={() => setSelProject(null)}
+            style={[styles.chip, !filter && styles.chipActive]}
+            onPress={() => setFilter(null)}
           >
-            <Text
-              style={[styles.chipText, !selProject && styles.chipTextActive]}
-            >
+            <Text style={[styles.chipText, !filter && styles.chipTextActive]}>
               All
             </Text>
           </TouchableOpacity>
           {(projects ?? []).map((p) => (
             <TouchableOpacity
               key={p.id}
-              style={[styles.chip, selProject === p.id && styles.chipActive]}
-              onPress={() => setSelProject(p.id)}
+              style={[styles.chip, filter === p.id && styles.chipActive]}
+              onPress={() => setFilter(p.id)}
             >
               <Text
                 style={[
                   styles.chipText,
-                  selProject === p.id && styles.chipTextActive,
+                  filter === p.id && styles.chipTextActive,
                 ]}
                 numberOfLines={1}
               >
@@ -1007,13 +960,13 @@ export default function QuotationScreen() {
         </ScrollView>
       )}
 
-      {isLoading ? (
+      {loading ? (
         <View style={{ padding: 16, gap: 10 }}>
           {[1, 2, 3].map((i) => (
             <View key={i} style={styles.skeleton} />
           ))}
         </View>
-      ) : !(quotations ?? []).length ? (
+      ) : !quotations.length ? (
         <View style={styles.empty}>
           <Text style={{ fontSize: 52, marginBottom: 16 }}>📄</Text>
           <Text style={styles.emptyTitle}>No quotations yet</Text>
@@ -1031,17 +984,6 @@ export default function QuotationScreen() {
         <FlatList
           data={quotations}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <QuotationCard
-              qt={item}
-              onPress={() => {
-                setSelected(item);
-                setModalOpen(true);
-              }}
-              onShare={handleShare}
-              onDelete={handleDelete}
-            />
-          )}
           contentContainerStyle={{
             padding: 16,
             paddingTop: 0,
@@ -1050,11 +992,118 @@ export default function QuotationScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchQuotations();
+              }}
               tintColor={Colors.primary}
             />
           }
+          renderItem={({ item: qt }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => {
+                setSelected(qt);
+                setModalOpen(true);
+              }}
+              activeOpacity={ActiveOpacity}
+            >
+              {/* Card header */}
+              <View style={styles.cardTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardNo}>{qt.quotation_no}</Text>
+                  <Text style={styles.cardClient} numberOfLines={1}>
+                    👤 {qt.clients?.name ?? "—"}
+                  </Text>
+                  <Text style={styles.cardProj} numberOfLines={1}>
+                    📋 {qt.projects?.title ?? "—"}
+                  </Text>
+                  <Text style={styles.cardDate}>
+                    📅 {formatDate(qt.quotation_date)}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 8 }}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: s(qt.status).bg },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.dot,
+                        { backgroundColor: s(qt.status).dot },
+                      ]}
+                    />
+                    <Text
+                      style={[styles.statusText, { color: s(qt.status).text }]}
+                    >
+                      {qt.status.charAt(0).toUpperCase() + qt.status.slice(1)}
+                    </Text>
+                  </View>
+                  {/* Grand total from items */}
+                  <Text style={styles.cardTotal}>
+                    {formatCurrency(
+                      (qt.quotation_items ?? []).reduce((sum, it) => {
+                        const isSqft = (it.unit ?? "sqft") === "sqft";
+                        return (
+                          sum +
+                          (isSqft
+                            ? (Number(it.area_sqft) || 0) *
+                              (Number(it.rate_per_sqft) || 0) *
+                              (Number(it.quantity) || 1)
+                            : (Number(it.rate_per_sqft) || 0) *
+                              (Number(it.quantity) || 1))
+                        );
+                      }, 0),
+                    )}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Items summary */}
+              {(qt.quotation_items ?? []).length > 0 && (
+                <View style={styles.itemsSummary}>
+                  {(qt.quotation_items ?? []).slice(0, 4).map((it, i) => {
+                    const w = WORK_TYPES.find((w) => w.key === it.work_type);
+                    return (
+                      <View key={i} style={styles.itemPill}>
+                        <Text style={styles.itemPillText}>
+                          {w?.icon ?? "📝"} {w?.label ?? it.work_type}
+                        </Text>
+                        <Text style={styles.itemPillRate}>
+                          ₹{it.rate_per_sqft}/{it.unit}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                  {(qt.quotation_items ?? []).length > 4 && (
+                    <View style={styles.itemPill}>
+                      <Text style={styles.itemPillText}>
+                        +{(qt.quotation_items ?? []).length - 4} more
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Actions */}
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.shareBtn}
+                  onPress={() => handleShare(qt)}
+                >
+                  <Text style={styles.shareBtnText}>↗ Share PDF</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(qt.id)}>
+                  <Text style={{ color: Colors.danger, fontSize: 13 }}>
+                    🗑 Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          )}
         />
       )}
 
@@ -1064,7 +1113,7 @@ export default function QuotationScreen() {
           setSelected(null);
           setModalOpen(true);
         }}
-        activeOpacity={0.85}
+        activeOpacity={ActiveOpacity}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -1076,6 +1125,7 @@ export default function QuotationScreen() {
           setSelected(null);
         }}
         quotation={selected}
+        onSaved={fetchQuotations}
       />
     </View>
   );
@@ -1092,8 +1142,6 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     gap: 10,
   },
-  backBtn: { padding: 4 },
-  backText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   headerTitle: { color: "#fff", fontSize: 17, fontWeight: "700" },
   headerSub: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
   addBtn: {
@@ -1114,50 +1162,8 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
   chipTextActive: { color: "#fff", fontWeight: "700" },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    marginBottom: 10,
-    padding: 14,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  cardTop: { flexDirection: "row", gap: 12 },
-  cardNo: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: Colors.primary,
-    marginBottom: 3,
-  },
-  cardClient: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1A1A2E",
-    marginBottom: 2,
-  },
-  cardProject: { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
-  cardDate: { fontSize: 11, color: Colors.textMuted },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: "600" },
-  shareBtn: {
-    backgroundColor: Colors.primary + "15",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  shareBtnText: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
   skeleton: {
-    height: 110,
+    height: 130,
     backgroundColor: "#E0E0E0",
     borderRadius: 14,
     opacity: 0.5,
@@ -1187,6 +1193,74 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   emptyBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    marginBottom: 12,
+    padding: 14,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  cardTop: { flexDirection: "row", gap: 10, marginBottom: 10 },
+  cardNo: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: Colors.primary,
+    marginBottom: 3,
+  },
+  cardClient: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1A1A2E",
+    marginBottom: 2,
+  },
+  cardProj: { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
+  cardDate: { fontSize: 11, color: Colors.textMuted },
+  cardTotal: { fontSize: 18, fontWeight: "800", color: "#1A1A2E" },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontWeight: "600" },
+  itemsSummary: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginBottom: 10,
+  },
+  itemPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  itemPillText: { fontSize: 11, color: "#1E40AF", fontWeight: "600" },
+  itemPillRate: { fontSize: 10, color: Colors.textMuted },
+  cardActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: "#F0F0F0",
+  },
+  shareBtn: {
+    backgroundColor: Colors.primary + "15",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  shareBtnText: { fontSize: 13, color: Colors.primary, fontWeight: "700" },
   fab: {
     position: "absolute",
     bottom: 30,
@@ -1200,7 +1274,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   fabIcon: { color: "#fff", fontSize: 28, fontWeight: "300", lineHeight: 32 },
-  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modal: { flex: 1, backgroundColor: Colors.background },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1210,8 +1284,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: "#E0E0E0",
   },
-  modalClose: { padding: 4, width: 32 },
-  closeText: { fontSize: 18, color: Colors.textSecondary },
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#1A1A2E" },
   saveBtn: {
     backgroundColor: Colors.primary,
@@ -1220,14 +1292,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  modalBody: { flex: 1, padding: 16 },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    marginTop: 14,
-  },
   picker: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -1239,8 +1303,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  pickerValue: { fontSize: 15, color: "#1A1A2E", flex: 1 },
-  pickerPlaceholder: { fontSize: 15, color: "#9CA3AF", flex: 1 },
+  pickerVal: { fontSize: 15, color: "#1A1A2E", flex: 1 },
+  pickerPh: { fontSize: 15, color: "#9CA3AF", flex: 1 },
   pickerArrow: { fontSize: 12, color: Colors.textMuted },
   dropdown: {
     backgroundColor: "#FFFFFF",
@@ -1259,35 +1323,6 @@ const styles = StyleSheet.create({
   dropItemActive: { backgroundColor: "#EFF6FF" },
   dropText: { fontSize: 15, color: "#1A1A2E" },
   dropSub: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-  ratePickerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FFFBEB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-  },
-  ratePickerText: { fontSize: 12, color: "#92400E", fontWeight: "600" },
-  rateChip: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    minWidth: 120,
-    alignItems: "center",
-  },
-  rateChipName: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1A1A2E",
-    marginBottom: 3,
-    textAlign: "center",
-  },
-  rateChipRate: { fontSize: 13, fontWeight: "800", color: Colors.primary },
   itemsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1303,7 +1338,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addItemText: { fontSize: 13, color: Colors.primary, fontWeight: "700" },
-  itemRow: {
+  itemBox: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 12,
@@ -1311,36 +1346,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  itemHeader: {
+  itemHead: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
-  itemIndex: {
+  itemNum: {
     fontSize: 13,
     fontWeight: "700",
     color: Colors.textMuted,
-    width: 24,
+    width: 26,
   },
-  itemTypePicker: {
+  typePill: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.primary + "10",
+    backgroundColor: Colors.primary + "12",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  itemTypeText: {
+  typePillText: {
     fontSize: 13,
     fontWeight: "700",
     color: Colors.primary,
     flex: 1,
   },
-  removeBtn: { padding: 6 },
-  removeBtnText: { fontSize: 16, color: Colors.danger },
+  typeArrow: { fontSize: 11, color: Colors.primary },
+  removeBtn: { padding: 4 },
   typeDropdown: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -1360,46 +1395,32 @@ const styles = StyleSheet.create({
   },
   typeDropItemActive: { backgroundColor: "#EFF6FF" },
   typeDropText: { fontSize: 14, color: "#1A1A2E", flex: 1 },
-  typeDropRate: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.success,
-    marginBottom: 2,
-  },
-  typeDropUnit: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
+  typeDropRate: { fontSize: 12, fontWeight: "700", color: Colors.success },
   itemFields: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  itemField: { minWidth: "45%", flex: 1 },
-  itemFieldLabel: {
+  itemField: { minWidth: "30%", flex: 1 },
+  fieldLbl: {
     fontSize: 11,
     fontWeight: "600",
     color: Colors.textMuted,
     marginBottom: 4,
   },
-  itemFieldInput: { paddingVertical: 9 },
-  itemTotal: { fontSize: 16, fontWeight: "800", color: Colors.primary },
-  grandTotalBox: {
+  fieldInput: { paddingVertical: 9 },
+  amtField: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 10,
+    padding: 10,
+    justifyContent: "center",
+  },
+  amtText: { fontSize: 16, fontWeight: "800", color: Colors.primary },
+  grandBox: {
     backgroundColor: Colors.primary,
     borderRadius: 14,
     padding: 16,
     marginTop: 8,
-  },
-  grandTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  grandTotalLabel: { fontSize: 14, color: "rgba(255,255,255,0.7)" },
-  grandTotalSub: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginBottom: 4,
-  },
-  grandTotalValue: { fontSize: 28, fontWeight: "900", color: "#fff" },
+  grandLabel: { fontSize: 13, color: "rgba(255,255,255,0.75)" },
+  grandValue: { fontSize: 26, fontWeight: "900", color: "#fff" },
 });

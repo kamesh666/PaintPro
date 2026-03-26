@@ -25,17 +25,6 @@ import {
 import { formatCurrency, formatDate, SKILL_TYPE_LABELS } from "../lib/utils";
 import { useAuthStore } from "../store/authStore";
 
-const INPUT = {
-  backgroundColor: "#FFFFFF",
-  borderWidth: 1,
-  borderColor: "#D1D5DB",
-  borderRadius: 10,
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  fontSize: 15,
-  color: "#1A1A2E",
-};
-
 const SKILL_COLORS = {
   painter: { bg: "#E6F1FB", text: "#0C447C", dot: "#2980B9" },
   helper: { bg: "#E1F5EE", text: "#085041", dot: "#27AE60" },
@@ -134,9 +123,9 @@ function WorkerModal({ visible, onClose, worker }) {
           style={styles.modalBody}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Worker name *</Text>
+          <Text style={LabelStyles}>Worker name *</Text>
           <TextInput
-            style={INPUT}
+            style={InputStyles}
             value={name}
             onChangeText={setName}
             placeholder="e.g. Ravi Kumar"
@@ -145,9 +134,9 @@ function WorkerModal({ visible, onClose, worker }) {
             underlineColorAndroid="transparent"
           />
 
-          <Text style={styles.label}>Phone number</Text>
+          <Text style={LabelStyles}>Phone number</Text>
           <TextInput
-            style={INPUT}
+            style={InputStyles}
             value={phone}
             onChangeText={setPhone}
             placeholder="e.g. 9876543210"
@@ -156,7 +145,7 @@ function WorkerModal({ visible, onClose, worker }) {
             underlineColorAndroid="transparent"
           />
 
-          <Text style={styles.label}>Skill type</Text>
+          <Text style={LabelStyles}>Skill type</Text>
           <TouchableOpacity
             style={styles.picker}
             onPress={() => setSkillOpen(!skillOpen)}
@@ -220,9 +209,9 @@ function WorkerModal({ visible, onClose, worker }) {
             </View>
           )}
 
-          <Text style={styles.label}>Daily rate (₹) *</Text>
+          <Text style={LabelStyles}>Daily rate (₹) *</Text>
           <TextInput
-            style={INPUT}
+            style={InputStyles}
             value={dailyRate}
             onChangeText={setDailyRate}
             placeholder="e.g. 700"
@@ -330,7 +319,7 @@ function LogModal({ visible, onClose }) {
           style={styles.modalBody}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Project *</Text>
+          <Text style={LabelStyles}>Project *</Text>
           <TouchableOpacity
             style={styles.picker}
             onPress={() => {
@@ -383,7 +372,7 @@ function LogModal({ visible, onClose }) {
             </View>
           )}
 
-          <Text style={styles.label}>Worker *</Text>
+          <Text style={LabelStyles}>Worker *</Text>
           <TouchableOpacity
             style={styles.picker}
             onPress={() => {
@@ -438,9 +427,9 @@ function LogModal({ visible, onClose }) {
             </View>
           )}
 
-          <Text style={styles.label}>Date</Text>
+          <Text style={LabelStyles}>Date</Text>
           <TextInput
-            style={INPUT}
+            style={InputStyles}
             value={logDate}
             onChangeText={setLogDate}
             placeholder="YYYY-MM-DD"
@@ -449,7 +438,7 @@ function LogModal({ visible, onClose }) {
             underlineColorAndroid="transparent"
           />
 
-          <Text style={styles.label}>Days worked</Text>
+          <Text style={LabelStyles}>Days worked</Text>
           <Text style={{ fontSize: 11, color: "#6B7280", marginBottom: 6 }}>
             Tap to select: Absent=0 · Half=½ · 1 Shift · 1½ Shifts (full day)
           </Text>
@@ -621,7 +610,7 @@ export default function LabourScreen() {
             borderRadius: 10,
           }}
           onPress={() => router.push("/weekly-labour")}
-          activeOpacity={0.85}
+          activeOpacity={ActiveOpacity}
         >
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>
             📆 Weekly
@@ -792,7 +781,7 @@ export default function LabourScreen() {
                     setSelectedWorker(item);
                     setWorkerModalOpen(true);
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={ActiveOpacity}
                 >
                   <View style={styles.workerAvatar}>
                     <Text style={styles.workerAvatarText}>
@@ -832,7 +821,7 @@ export default function LabourScreen() {
         onPress={() =>
           tab === "logs" ? setLogModalOpen(true) : setWorkerModalOpen(true)
         }
-        activeOpacity={0.85}
+        activeOpacity={ActiveOpacity}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -854,8 +843,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tabRow: {
     flexDirection: "row",
-    margin: 16,
-    marginBottom: 8,
+    margin: Spacing.md,
+    marginBottom: Spacing.sm,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 4,
@@ -886,8 +875,8 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -1048,13 +1037,6 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   modalBody: { flex: 1, padding: 16 },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    marginTop: 14,
-  },
   picker: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
