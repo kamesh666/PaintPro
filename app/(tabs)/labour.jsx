@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActiveOpacity,
   Alert,
   FlatList,
   Modal,
@@ -31,6 +30,17 @@ const SKILL_COLORS = {
   painter: { bg: "#E6F1FB", text: "#0C447C", dot: "#2980B9" },
   helper: { bg: "#E1F5EE", text: "#085041", dot: "#27AE60" },
   supervisor: { bg: "#FAEEDA", text: "#633806", dot: "#F39C12" },
+};
+
+const INPUT = {
+  backgroundColor: "#FFFFFF",
+  borderWidth: 1,
+  borderColor: "#D1D5DB",
+  borderRadius: 10,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  fontSize: 15,
+  color: "#1A1A2E",
 };
 
 function SkillBadge({ skill }) {
@@ -670,7 +680,7 @@ export default function LabourScreen() {
             borderRadius: 10,
           }}
           onPress={() => router.push("/weekly-labour")}
-          activeOpacity={ActiveOpacity}
+          activeOpacity={0.8}
         >
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>
             📆 Weekly
@@ -730,7 +740,7 @@ export default function LabourScreen() {
             <View style={{ flexDirection: "row", marginBottom: 8 }}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <TextInput
-                  style={[InputStyles, { height: 36, fontSize: 14 }]}
+                  style={[INPUT, { height: 38, fontSize: 14 }]}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder="🔍 Search worker..."
@@ -1018,7 +1028,7 @@ export default function LabourScreen() {
         onPress={() =>
           tab === "logs" ? setLogModalOpen(true) : setWorkerModalOpen(true)
         }
-        activeOpacity={ActiveOpacity}
+        activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>

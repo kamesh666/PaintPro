@@ -707,7 +707,7 @@ export default function ClientPaymentsScreen() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setModalOpen(true)}
-        activeOpacity={ActiveOpacity}
+        activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
